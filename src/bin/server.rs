@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf, time::Instant};
 use std::env;
 use std::sync::Arc;
 
@@ -14,6 +14,7 @@ use image::{imageops::FilterType, ImageReader};
 use serde::Serialize;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
+use tracing::{debug, error, info};
 
 // Burn (CPU backend) for native inference
 use burn::{
@@ -49,6 +50,15 @@ struct PredictResponse {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize logging (RUST_LOG controls level, default to info)
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info");
+    }
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .compact()
+        .init();
+
     // Inference config must match training
     let cfg = AppConfig {
         image_height: 128,
@@ -72,38 +82,52 @@ async fn main() -> Result<()> {
             cwd_msg
         );
     }
-    println!("Loading Burn checkpoint from {}", model_path.display());
+    info!(path = %model_path.display(), "Loading Burn checkpoint path configured");
     // Store only config and path in state to keep it Send + Sync
     let state = BurnState { cfg, model_path };
 
-    // CORS: allow localhost:3000
+    // CORS: allow dev UIs (Vite default 5173, others) — relax to Any for development simplicity
     let cors = CorsLayer::new()
-        .allow_origin(HeaderValue::from_static("http://localhost:3000"))
+        .allow_origin(Any)
         .allow_methods([Method::POST, Method::OPTIONS, Method::GET])
         .allow_headers(Any);
 
     let router = Router::new()
-        .route("/health", get(|| async { "ok" }))
+        .route("/health", get(health))
         .route("/predict", post(predict))
         .with_state(state)
         .layer(cors);
 
     let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
-    println!("API listening on http://{}", addr);
+    info!(%addr, "API listening");
     let listener = TcpListener::bind(addr).await.expect("bind");
     axum::serve(listener, router).await.context("Server error")?;
 
     Ok(())
 }
 
+async fn health() -> impl IntoResponse {
+    info!("/health called");
+    "ok"
+}
+
 async fn predict(State(state): State<BurnState>, mut multipart: Multipart) -> impl IntoResponse {
+    let t_total = Instant::now();
+    let req_id = uuid::Uuid::new_v4();
+    info!(%req_id, "Predict request started");
     // Pull first part named 'image'
     let mut image_bytes: Option<Vec<u8>> = None;
     while let Ok(Some(field)) = multipart.next_field().await {
         if field.name() == Some("image") {
             match field.bytes().await {
-                Ok(b) => { image_bytes = Some(b.to_vec()); break; }
-                Err(e) => return (StatusCode::BAD_REQUEST, format!("Invalid image upload: {}", e)).into_response(),
+                Ok(b) => { 
+                    debug!(%req_id, size = b.len(), "Received image bytes");
+                    image_bytes = Some(b.to_vec()); break; 
+                }
+                Err(e) => {
+                    error!(%req_id, error = %e, "Reading multipart field failed");
+                    return (StatusCode::BAD_REQUEST, format!("Invalid image upload: {}", e)).into_response()
+                },
             }
         }
     }
@@ -111,10 +135,15 @@ async fn predict(State(state): State<BurnState>, mut multipart: Multipart) -> im
     let image_bytes = match image_bytes { Some(b) => b, None => return (StatusCode::BAD_REQUEST, "No 'image' field provided").into_response() };
 
     // Decode and preprocess to CHW f32 [0,1]
+    let t_pre = Instant::now();
     let chw = match preprocess_bytes(&image_bytes, state.cfg.image_height, state.cfg.image_width) {
         Ok(v) => v,
-        Err(e) => return (StatusCode::BAD_REQUEST, format!("Preprocess failed: {}", e)).into_response(),
+        Err(e) => {
+            error!(%req_id, error = %e, "Preprocess failed");
+            return (StatusCode::BAD_REQUEST, format!("Preprocess failed: {}", e)).into_response()
+        },
     };
+    debug!(%req_id, ms = t_pre.elapsed().as_millis() as u64, "Preprocessing done");
 
     // Prepare device and model per request (simple and thread-safe)
     let device = NdArrayDevice::default();
@@ -124,32 +153,43 @@ async fn predict(State(state): State<BurnState>, mut multipart: Multipart) -> im
     let input: Tensor<NdArray, 4> = input_1d.reshape([1, 3, state.cfg.image_height, state.cfg.image_width]);
 
     // Instantiate and load model weights
+    let t_load = Instant::now();
     let mut model: MalariaCNN<NdArray> = MalariaCNN::new(
         &device,
         3, 16, 32, 64, 128, 64, 2, 0.3,
     );
     let record = match BinFileRecorder::<FullPrecisionSettings>::new().load(state.model_path.clone().into(), &device) {
         Ok(r) => r,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to load checkpoint: {:?}", e)).into_response(),
+        Err(e) => {
+            error!(%req_id, error = ?e, path = %state.model_path.display(), "Failed to load checkpoint");
+            return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to load checkpoint: {:?}", e)).into_response()
+        },
     };
     model = model.load_record(record);
+    debug!(%req_id, ms = t_load.elapsed().as_millis() as u64, "Model loaded");
 
+    let t_inf = Instant::now();
     let logits: Tensor<NdArray, 2> = model.forward(input);
     let logits_data = logits.into_data();
     let logits_vec: Vec<f32> = match logits_data.to_vec::<f32>() {
         Ok(v) => v,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to read logits: {:?}", e)).into_response(),
+        Err(e) => {
+            error!(%req_id, error = ?e, "Failed to read logits");
+            return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to read logits: {:?}", e)).into_response()
+        },
     };
+    debug!(%req_id, ms = t_inf.elapsed().as_millis() as u64, "Inference done");
 
     // Softmax
     let probs_vec = softmax(&logits_vec);
     if probs_vec.len() < 2 {
+        error!(%req_id, len = probs_vec.len(), "Invalid model output length");
         return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid model output length").into_response();
     }
     let probs = [probs_vec[0], probs_vec[1]];
     let class_idx = if probs[1] >= probs[0] { 1 } else { 0 };
     let class = if class_idx == 1 { "Parasitized" } else { "Uninfected" };
-
+    info!(%req_id, class, p0 = probs[0], p1 = probs[1], total_ms = t_total.elapsed().as_millis() as u64, "Prediction ready");
     Json(PredictResponse { class: class.to_string(), probabilities: probs }).into_response()
 }
 

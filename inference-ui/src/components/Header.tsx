@@ -12,8 +12,9 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-3">
           <Link to="/" className="text-lg font-bold tracking-tight">{t("app.title")}</Link>
         </div>
-        <nav className="hidden md:flex items-center gap-4 opacity-90">
+        <nav className="flex items-center gap-4 opacity-90">
           <Link to="/demo" className={buttonVariants({ variant: "ghost" })}>{t("app.nav.demo")}</Link>
+          <Link to="/analyze" className={buttonVariants({ variant: "ghost" })}>Analyze</Link>
           <a href="#features" className={buttonVariants({ variant: "ghost" })}>{t("app.nav.features")}</a>
           <a href="mailto:contact@yourdomain.com" className={buttonVariants({ variant: "ghost" })}>{t("app.nav.contact")}</a>
         </nav>

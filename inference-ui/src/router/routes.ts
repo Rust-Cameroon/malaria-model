@@ -9,6 +9,7 @@
 import { lazy } from "react";
 const HomePage = lazy(() => import("../pages/welcome/HomePage"));
 const DemoPage = lazy(() => import("../pages/demo/DemoPage"));
+const AnalyzePage = lazy(() => import("../pages/analyze/AnalyzePage"));
 
 const routes = [
   {
@@ -19,6 +20,11 @@ const routes = [
   {
     path: "/demo",
     component: DemoPage,
+    isPublic: true,
+  },
+  {
+    path: "/analyze",
+    component: AnalyzePage,
     isPublic: true,
   },
 ];

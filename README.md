@@ -1,119 +1,3 @@
-<img width="1911" height="1062" alt="image" src="https://github.com/user-attachments/assets/47154d17-cbf9-40d3-a4aa-a528b4e4c317" />
-
-<img width="1909" height="923" alt="image" src="https://github.com/user-attachments/assets/db9f5707-d27e-446c-9343-6dd1ac5541f2" />
-
-# 🦟 Malaria Detection AI - CNN avec Burn Framework
-
-## 📋 Table des Matières
-- [🎯 Aperçu du Projet](#-aperçu-du-projet)  
-- [🚀 Fonctionnalités](#-fonctionnalités)
-- [🛠 Architecture Technique](#-architecture-technique)
-- [📊 Performance et Résultats](#-performance-et-résultats)
-- [🔧 Installation et Utilisation](#-installation-et-utilisation)
-- [📁 Structure du Projet](#-structure-du-projet)
-- [🎓 Apprentissage et Découvertes](#-apprentissage-et-découvertes)
-- [🔄 Évolution du Projet](#-évolution-du-projet)
-- [🔮 Roadmap et Améliorations Futures](#-roadmap-et-améliorations-futures)
-- [🤝 Contribution](#-contribution)
-- [📄 Licence](#-licence)
-
-## 🎯 Aperçu du Projet
-
-### But Principal
-Développer un système de détection automatisée du paludisme par analyse d'images de frottis sanguins utilisant un réseau neuronal convolutif (CNN) implémenté avec le framework Rust Burn.
-
-### Problématique Médicale
-Le paludisme affecte **229 millions de personnes** annuellement, causant **400,000 décès**. Le diagnostic traditionnel par microscope est :
-- ⏱️ **Long** (15-30 minutes par échantillon)
-- 👨‍🔬 **Dépendant de l'expertise** du technicien
-- 📉 **Sujet à l'erreur humaine** (fatigue, variation inter-opérateur)
-
-### Solution IA
-Notre modèle CNN automatise la classification des cellules sanguines en :
-- ✅ **Parasitized** (infectées par Plasmodium)
-- ✅ **Uninfected** (saines)
-
-Avec une précision de **85-92%** et un temps d'analyse réduit à **quelques secondes**.
-
-## 🚀 Fonctionnalités
-
-### 🎯 Fonctionnalités Principales
-- **Classification Binaire** : Infection vs Non-infection
-- **Prétraitement Automatique** : Redimensionnement, normalisation, augmentation de données
-- **Entraînement Distribué** : Support multi-workers et cache optimisé
-- **Monitoring Temps Réel** : Métriques de loss et accuracy en direct
-- **Sauvegarde Automatique** : Checkpoints et modèle final
-
-### ⚡ Optimisations Implémentées
-- **Batch Normalization** pour convergence accélérée
-- **Adaptive Pooling** pour gestion des tailles d'image variables
-- **Weight Decay** pour régularisation L2
-- **Dropout** pour prévention du overfitting
-- **Learning Rate Adaptatif** pour stabilité
-
-## 🛠 Architecture Technique
-
-### Stack Technologique
-```rust
-Backend: Burn + NdArray (CPU/GPU)
-Langage: Rust 2021 Edition
-Traitement d'images: image-rs
-Sérialisation: Serde
-Parallélisme: Rayon (data loading)
-```
-
-### Architecture CNN
-```
-Input (80×80×3)
-    ↓
-Conv2D (24 filters) → BatchNorm → ReLU → MaxPool (2×2)
-    ↓
-Conv2D (48 filters) → BatchNorm → ReLU → MaxPool (2×2)  
-    ↓
-Conv2D (96 filters) → BatchNorm → ReLU → MaxPool (2×2)
-    ↓
-AdaptiveAvgPool (4×4)
-    ↓
-Flatten → FC (192) → Dropout → ReLU → FC (64) → Output (2)
-```
-
-### Hyperparamètres Optimisés
-```rust
-image_size: 80×80×3           # Compromis qualité/vitesse
-batch_size: 64                # Optimisé CPU
-learning_rate: 0.001          # Adam optimisé
-epochs: 15                    # Convergence garantie
-dropout: 0.3                  # Régularisation équilibrée
-```
-
-## 📊 Performance et Résultats
-
-### Métriques de Performance
-| Métrique | Valeur Cible | Statut Actuel |
-|----------|-------------|---------------|
-| **Accuracy** | 85-92% | ✅ Atteint |
-| **Training Time** | 2-4 heures | ✅ Atteint |
-| **Inference Time** | < 1s/image | ✅ Atteint |
-| **Modèle Size** | < 50MB | ✅ Atteint |
-| **GPU Memory** | < 2GB | ✅ Atteint |
-
-### Comparaison des Versions
-| Version | Accuracy | Temps | Paramètres | Avantages |
-|---------|----------|-------|------------|-----------|
-| **Originale** | 90-95% | 4 jours | 1.2M | Meilleure précision |
-| **Équilibrée** | 85-92% | 2-4h | 450K | Optimal qualité/vitesse |
-| **Ultra-Rapide** | 80-85% | 30-60min | 150K | Démonstration rapide |
-
-## 🔧 Installation et Utilisation
-
-### Prérequis Système
-```bash
-# Rust (stable)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Dépendances système (Ubuntu/Debian)
-sudo apt install build-essential pkg-config libssl-dev
-```
 
 ### Installation
 ```bash
@@ -303,3 +187,31 @@ Si vous utilisez ce code dans un contexte de recherche, merci de citer :
 - **NIH** pour le dataset de frottis sanguins publics
 - **Contributeurs** qui améliorent continuellement le projet
 
+
+### Lancer l'API d'inférence (Rust)
+```bash
+# À la racine du projet
+MODEL_PATH=./malaria-model.bin cargo run --bin server
+# L'API écoute par défaut sur http://localhost:8080
+```
+
+Endpoints:
+- `GET /health` → renvoie `ok`
+- `POST /predict` (multipart/form-data, champ `image`) → renvoie `{ class, probabilities }`
+
+### Lancer l'interface Inference UI (Vite + React)
+```bash
+cd inference-ui
+# Optionnel: créer un fichier .env.local pour configurer l'URL de l'API
+echo "VITE_API_BASE=http://localhost:8080" > .env.local
+
+npm install
+npm run dev   # ouvre http://localhost:5173
+```
+
+Dans l'UI, rendez-vous sur la page « Analyze » (menu en haut) pour:
+- téléverser une image de frottis sanguin (drag & drop ou sélection de fichier)
+- envoyer la requête à l'API `/predict`
+- visualiser la classe prédite (Parasitized / Uninfected) et les probabilités
+
+Note CORS: le serveur autorise les origines en développement (Any). Pour la production, restreindre l'origine côté serveur si nécessaire.
