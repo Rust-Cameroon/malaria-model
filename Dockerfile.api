@@ -1,0 +1,39 @@
+# Build the Rust API
+FROM rust:1.90-bullseye AS builder
+
+WORKDIR /app
+
+# Cache deps
+COPY Cargo.toml Cargo.lock ./
+# Create minimal src to satisfy cargo
+RUN mkdir -p src/bin && echo "fn main(){}" > src/main.rs && echo "fn main(){}" > src/bin/server.rs && cargo fetch
+
+# Copy full source
+COPY . .
+
+# Build release
+RUN cargo build --release --bin server
+
+# Runtime image
+FROM debian:bullseye-slim AS runtime
+
+# Install runtime deps
+RUN apt-get update && apt-get install -y libssl1.1 ca-certificates && rm -rf /var/lib/apt/lists/* || true
+
+WORKDIR /app
+
+# Copy binary and model
+COPY --from=builder /app/target/release/server /app/server
+COPY malaria-model.bin /app/malaria-model.bin
+
+# Non-root user
+RUN useradd -m appuser
+USER appuser
+
+ENV PORT=8080 \
+    RUST_LOG=info \
+    MODEL_PATH=/app/malaria-model.bin
+
+EXPOSE 8080
+
+CMD ["/app/server"]
