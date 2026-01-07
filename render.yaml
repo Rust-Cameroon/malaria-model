@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: malaria-inference-ui
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    dockerfilePath: inference-ui/Dockerfile
+    dockerContext: inference-ui
+    healthCheckPath: /
+  - type: web
+    name: malaria-inference-api
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    dockerfilePath: Dockerfile.api
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: MODEL_PATH
+        value: /app/malaria-model.bin
