@@ -1,0 +1,19 @@
+# Rust/Trunk build caches
+/target
+/.cargo
+
+# Trunk build output (rebuilt inside image)
+/dist
+/dev-dist
+
+# Vite/Node related
+/node_modules
+
+# VCS
+/.git
+.gitignore
+
+# OS/IDE
+.DS_Store
+.vscode
+.idea

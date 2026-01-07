@@ -98,7 +98,11 @@ async fn main() -> Result<()> {
         .with_state(state)
         .layer(cors);
 
-    let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(8080);
+    let addr: SocketAddr = SocketAddr::from(([0, 0, 0, 0], port));
     info!(%addr, "API listening");
     let listener = TcpListener::bind(addr).await.expect("bind");
     axum::serve(listener, router).await.context("Server error")?;
