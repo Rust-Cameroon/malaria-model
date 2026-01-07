@@ -38,4 +38,4 @@ USER appuser
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["sh", "-c", "static-web-server --port ${PORT:-8080} --host 0.0.0.0 --root . --spa index.html"]
+CMD ["sh", "-c", "static-web-server --port ${PORT:-8080} --host 0.0.0.0 --root . --page404 index.html"]
