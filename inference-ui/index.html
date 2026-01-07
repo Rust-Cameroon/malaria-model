@@ -1,36 +1,57 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Malaria Detection – AI Smear Analysis</title>
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="/src/pages/welcome/logos/react.svg"
-    />
-    <meta name="description" content="AI-assisted malaria blood smear analysis for clinicians, labs, and education." />
-    <meta name="author" content="Malaria Detection" />
-
-    <meta property="og:title" content="Malaria Detection – AI Smear Analysis" />
-    <meta property="og:description" content="AI-assisted malaria blood smear analysis for clinicians, labs, and education." />
-
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#10b981" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Malaria Detection" />
-
-    <link rel="apple-touch-icon" href="/src/pages/welcome/logos/react.svg" />
-
-    <!-- Preload critical fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Malaria Inference UI (Yew)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Poppins', 'ui-sans-serif', 'system-ui'] },
+            colors: {
+              primary: { DEFAULT: '#1E40AF', foreground: '#FFFFFF' },
+              'dgrv-blue': '#1E40AF',
+              'dgrv-green': '#10B981',
+              'dgrv-light-blue': '#EFF6FF',
+              'bright-blue': '#00BFFF',
+            },
+            borderRadius: {
+              lg: '0.5rem',
+              md: '0.375rem',
+              sm: '0.25rem',
+            },
+            keyframes: {
+              'fade-in': { '0%': { opacity: 0, transform: 'translateY(10px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+              'scale-in': { '0%': { transform: 'scale(0.95)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+              glow: { '0%, 100%': { boxShadow: '0 0 5px rgba(30, 64, 175, 0.5)' }, '50%': { boxShadow: '0 0 20px rgba(30, 64, 175, 0.8)' } },
+            },
+            animation: {
+              'fade-in': 'fade-in 0.3s ease-out',
+              'scale-in': 'scale-in 0.2s ease-out',
+              glow: 'glow 2s ease-in-out infinite',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; }
+    </style>
+    <script>
+      // Optional: set window.VITE_API_BASE = "http://localhost:8080"; at runtime to override
+    </script>
   </head>
-
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Trunk will build and inject the WASM/JS for this Rust crate -->
+    <link data-trunk rel="copy-dir" href="static/" />
+    <link data-trunk rel="rust" />
   </body>
-</html>
+  </html>

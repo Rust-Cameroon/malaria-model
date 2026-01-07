@@ -2,3 +2,5 @@
 data/
 malaria-model/
 .idea/
+inference-ui/target/
+inference-ui/dist/
