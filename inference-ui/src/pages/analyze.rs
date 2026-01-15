@@ -6,8 +6,26 @@ use yew::prelude::*;
 
 #[derive(Clone, PartialEq, serde::Deserialize, serde::Serialize, Debug)]
 pub struct PredictResponse {
-    pub class: String,
-    pub probabilities: [f64; 2],
+    pub infected: bool,
+    pub predicted_species: String,
+    pub species_probabilities: Vec<f64>,
+    pub stage_probabilities: [f64; 4],
+}
+
+fn pct(v: f64) -> i32 {
+    (v * 100.0).round().clamp(0.0, 100.0) as i32
+}
+
+fn argmax(v: &[f64]) -> usize {
+    let mut best_i = 0usize;
+    let mut best_v = f64::NEG_INFINITY;
+    for (i, &x) in v.iter().enumerate() {
+        if x > best_v {
+            best_v = x;
+            best_i = i;
+        }
+    }
+    best_i
 }
 
 fn api_base() -> String {
@@ -214,16 +232,147 @@ pub fn analyze_page() -> Html {
                 if let Some(err) = (*error).clone() {
                     <p class="text-sm text-red-300">{err}</p>
                 }
-                if let Some(res) = (*result).clone() {
-                    <div>
-                        <div class="text-[0.95rem] mb-2">{"Predicted class: "} <span class="font-semibold">{res.class.clone()}</span></div>
-                        <div>
-                            <div class="text-xs opacity-70 mb-1">{"Probabilities"}</div>
-                            <ProbBar label="Uninfected" value={res.probabilities[0]} class_name="bar-a" />
-                            <div class="h-2" />
-                            <ProbBar label="Parasitized" value={res.probabilities[1]} class_name="bar-b" />
+                {
+                    if let Some(res) = (*result).clone() {
+                        let p_uninfected = *res.species_probabilities.get(4).unwrap_or(&0.0);
+                        let p_infected = (1.0 - p_uninfected).clamp(0.0, 1.0);
+
+                        let malaria_species_probs = [
+                            *res.species_probabilities.get(0).unwrap_or(&0.0),
+                            *res.species_probabilities.get(1).unwrap_or(&0.0),
+                            *res.species_probabilities.get(2).unwrap_or(&0.0),
+                            *res.species_probabilities.get(3).unwrap_or(&0.0),
+                        ];
+                        let malaria_species_labels = ["Falciparum", "Malariae", "Ovale", "Vivax"];
+                        let best_species_idx = argmax(&malaria_species_probs);
+                        let best_species_label = malaria_species_labels
+                            .get(best_species_idx)
+                            .unwrap_or(&"Unknown");
+                        let best_species_conf = malaria_species_probs[best_species_idx];
+
+                        let stage_labels = [
+                            "Ring stage (R)",
+                            "Trophozoite stage (T)",
+                            "Schizont stage (S)",
+                            "Gametocyte stage (G)",
+                        ];
+                        let best_stage_idx = argmax(&res.stage_probabilities);
+                        let best_stage_label = stage_labels
+                            .get(best_stage_idx)
+                            .unwrap_or(&"Unknown stage");
+                        let best_stage_conf = res.stage_probabilities[best_stage_idx];
+
+                        html! {
+                            <div>
+                        <div class={classes!(
+                            "rounded-xl",
+                            "border",
+                            "p-4",
+                            "bg-black/20",
+                            if res.infected { "border-red-500/40" } else { "border-emerald-500/40" }
+                        )}>
+                            <div class="text-xs uppercase tracking-wide opacity-70">{"Diagnosis"}</div>
+                            <div class="mt-1 text-xl font-extrabold">
+                                { if res.infected {
+                                    "Malaria detected"
+                                } else {
+                                    "No malaria detected"
+                                }}
+                            </div>
+                            <div class="mt-2 text-sm opacity-90">
+                                { if res.infected {
+                                    html!{
+                                        <span>{format!("Confidence: {}% (infected)", pct(p_infected) )}</span>
+                                    }
+                                } else {
+                                    html!{
+                                        <span>{format!("Confidence: {}% (uninfected)", pct(p_uninfected) )}</span>
+                                    }
+                                }}
+                            </div>
+
+                            <div class="mt-4 grid gap-3">
+                                <div class="rounded-lg border border-white/10 bg-white/5 p-3">
+                                    <div class="text-xs opacity-70">{"What this means"}</div>
+                                    { if res.infected {
+                                        html!{
+                                            <div class="text-sm mt-1">
+                                                {"The image shows features consistent with malaria infection."}
+                                            </div>
+                                        }
+                                    } else {
+                                        html!{
+                                            <div class="text-sm mt-1">
+                                                {"The image looks like a normal (uninfected) blood cell."}
+                                            </div>
+                                        }
+                                    }}
+                                </div>
+
+                                { if res.infected {
+                                    html!{
+                                        <div class="rounded-lg border border-white/10 bg-white/5 p-3">
+                                            <div class="text-xs opacity-70">{"Most likely malaria type"}</div>
+                                            <div class="text-base font-semibold mt-1">{best_species_label}</div>
+                                            <div class="text-sm opacity-90">{format!("Confidence: {}%", pct(best_species_conf))}</div>
+                                        </div>
+                                    }
+                                } else {
+                                    html!{}
+                                }}
+
+                                { if res.infected {
+                                    html!{
+                                        <div class="rounded-lg border border-white/10 bg-white/5 p-3">
+                                            <div class="text-xs opacity-70">{"Most likely parasite stage (presence)"}</div>
+                                            <div class="text-base font-semibold mt-1">{best_stage_label}</div>
+                                            <div class="text-sm opacity-90">{format!("Confidence: {}%", pct(best_stage_conf))}</div>
+                                            <div class="text-xs opacity-60 mt-1">{"Stage prediction is a weak label (image-level presence), not a per-parasite diagnosis."}</div>
+                                        </div>
+                                    }
+                                } else {
+                                    html!{}
+                                }}
+                            </div>
                         </div>
+
+                        <details class="mt-4">
+                            <summary class="cursor-pointer text-sm opacity-80">{"Show detailed probabilities"}</summary>
+                            <div class="mt-3">
+                                <div class="text-xs opacity-70 mb-1">{"Species probabilities"}</div>
+                                <ProbBar label="Falciparum" value={*res.species_probabilities.get(0).unwrap_or(&0.0)} class_name="bar-a" />
+                                <div class="h-2" />
+                                <ProbBar label="Malariae" value={*res.species_probabilities.get(1).unwrap_or(&0.0)} class_name="bar-a" />
+                                <div class="h-2" />
+                                <ProbBar label="Ovale" value={*res.species_probabilities.get(2).unwrap_or(&0.0)} class_name="bar-a" />
+                                <div class="h-2" />
+                                <ProbBar label="Vivax" value={*res.species_probabilities.get(3).unwrap_or(&0.0)} class_name="bar-a" />
+                                <div class="h-2" />
+                                <ProbBar label="Uninfected" value={*res.species_probabilities.get(4).unwrap_or(&0.0)} class_name="bar-b" />
+                            </div>
+
+                            { if res.infected {
+                                html!{
+                                    <div class="mt-5">
+                                        <div class="text-xs opacity-70 mb-1">{"Stage probabilities (presence)"}</div>
+                                        <ProbBar label="Ring (R)" value={res.stage_probabilities[0]} class_name="bar-a" />
+                                        <div class="h-2" />
+                                        <ProbBar label="Trophozoite (T)" value={res.stage_probabilities[1]} class_name="bar-a" />
+                                        <div class="h-2" />
+                                        <ProbBar label="Schizont (S)" value={res.stage_probabilities[2]} class_name="bar-a" />
+                                        <div class="h-2" />
+                                        <ProbBar label="Gametocyte (G)" value={res.stage_probabilities[3]} class_name="bar-a" />
+                                    </div>
+                                }
+                            } else {
+                                html!{}
+                            }}
+                        </details>
                     </div>
+                        }
+                    } else {
+                        html! {}
+                    }
                 }
             </div>
         </div>

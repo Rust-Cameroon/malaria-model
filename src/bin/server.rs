@@ -1,11 +1,10 @@
 use std::{net::SocketAddr, path::PathBuf, time::Instant};
 use std::env;
-use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use axum::{
     extract::{Multipart, State},
-    http::{HeaderValue, Method, StatusCode},
+    http::{Method, StatusCode},
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
@@ -33,7 +32,9 @@ use malaria_cnn::MalariaCNN;
 struct AppConfig {
     image_height: usize,
     image_width: usize,
-    num_classes: usize,
+    num_species_classes: usize,
+    num_stage_classes: usize,
+    stage_loss_lambda: f32,
 }
 
 #[derive(Clone)]
@@ -44,8 +45,10 @@ struct BurnState {
 
 #[derive(Serialize)]
 struct PredictResponse {
-    class: String,
-    probabilities: [f32; 2],
+    infected: bool,
+    predicted_species: String,
+    species_probabilities: Vec<f32>,
+    stage_probabilities: [f32; 4],
 }
 
 #[tokio::main]
@@ -63,7 +66,9 @@ async fn main() -> Result<()> {
     let cfg = AppConfig {
         image_height: 128,
         image_width: 128,
-        num_classes: 2,
+        num_species_classes: 5,
+        num_stage_classes: 4,
+        stage_loss_lambda: 0.25,
     };
 
     // Allow overriding model path via env var MODEL_PATH; default to Burn checkpoint
@@ -160,7 +165,16 @@ async fn predict(State(state): State<BurnState>, mut multipart: Multipart) -> im
     let t_load = Instant::now();
     let mut model: MalariaCNN<NdArray> = MalariaCNN::new(
         &device,
-        3, 16, 32, 64, 128, 64, 2, 0.3,
+        3,
+        16,
+        32,
+        64,
+        128,
+        64,
+        state.cfg.num_species_classes,
+        state.cfg.num_stage_classes,
+        state.cfg.stage_loss_lambda,
+        0.3,
     );
     let record = match BinFileRecorder::<FullPrecisionSettings>::new().load(state.model_path.clone().into(), &device) {
         Ok(r) => r,
@@ -173,28 +187,63 @@ async fn predict(State(state): State<BurnState>, mut multipart: Multipart) -> im
     debug!(%req_id, ms = t_load.elapsed().as_millis() as u64, "Model loaded");
 
     let t_inf = Instant::now();
-    let logits: Tensor<NdArray, 2> = model.forward(input);
-    let logits_data = logits.into_data();
-    let logits_vec: Vec<f32> = match logits_data.to_vec::<f32>() {
+    let (species_logits, stage_logits) = model.forward(input);
+
+    let species_logits_vec: Vec<f32> = match species_logits.into_data().to_vec::<f32>() {
         Ok(v) => v,
         Err(e) => {
-            error!(%req_id, error = ?e, "Failed to read logits");
-            return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to read logits: {:?}", e)).into_response()
+            error!(%req_id, error = ?e, "Failed to read species logits");
+            return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to read species logits: {:?}", e)).into_response()
+        },
+    };
+
+    let stage_logits_vec: Vec<f32> = match stage_logits.into_data().to_vec::<f32>() {
+        Ok(v) => v,
+        Err(e) => {
+            error!(%req_id, error = ?e, "Failed to read stage logits");
+            return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to read stage logits: {:?}", e)).into_response()
         },
     };
     debug!(%req_id, ms = t_inf.elapsed().as_millis() as u64, "Inference done");
 
-    // Softmax
-    let probs_vec = softmax(&logits_vec);
-    if probs_vec.len() < 2 {
-        error!(%req_id, len = probs_vec.len(), "Invalid model output length");
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid model output length").into_response();
+    // Species softmax
+    let species_probs = softmax(&species_logits_vec);
+    if species_probs.len() < state.cfg.num_species_classes {
+        error!(%req_id, len = species_probs.len(), expected = state.cfg.num_species_classes, "Invalid species output length");
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid species output length").into_response();
     }
-    let probs = [probs_vec[0], probs_vec[1]];
-    let class_idx = if probs[1] >= probs[0] { 1 } else { 0 };
-    let class = if class_idx == 1 { "Parasitized" } else { "Uninfected" };
-    info!(%req_id, class, p0 = probs[0], p1 = probs[1], total_ms = t_total.elapsed().as_millis() as u64, "Prediction ready");
-    Json(PredictResponse { class: class.to_string(), probabilities: probs }).into_response()
+
+    let class_idx = argmax(&species_probs);
+    let species_labels = ["Falciparum", "Malariae", "Ovale", "Vivax", "Uninfected"];
+    let predicted_species = species_labels
+        .get(class_idx)
+        .unwrap_or(&"Unknown")
+        .to_string();
+    let infected = predicted_species != "Uninfected";
+
+    // Stage sigmoid
+    let stage_probs_vec = sigmoid_vec(&stage_logits_vec);
+    let stage_probabilities = if stage_probs_vec.len() >= 4 {
+        [stage_probs_vec[0], stage_probs_vec[1], stage_probs_vec[2], stage_probs_vec[3]]
+    } else {
+        [0.0, 0.0, 0.0, 0.0]
+    };
+
+    info!(
+        %req_id,
+        infected,
+        predicted_species,
+        total_ms = t_total.elapsed().as_millis() as u64,
+        "Prediction ready"
+    );
+
+    Json(PredictResponse {
+        infected,
+        predicted_species,
+        species_probabilities: species_probs,
+        stage_probabilities,
+    })
+    .into_response()
 }
 
 fn preprocess_bytes(bytes: &[u8], target_height: usize, target_width: usize) -> Result<Vec<f32>> {
@@ -223,4 +272,20 @@ fn softmax(v: &[f32]) -> Vec<f32> {
     let exps: Vec<f32> = v.iter().map(|x| (*x - max).exp()).collect();
     let sum: f32 = exps.iter().sum();
     exps.into_iter().map(|e| e / sum).collect()
+}
+
+fn argmax(v: &[f32]) -> usize {
+    let mut best_i = 0usize;
+    let mut best_v = f32::NEG_INFINITY;
+    for (i, &x) in v.iter().enumerate() {
+        if x > best_v {
+            best_v = x;
+            best_i = i;
+        }
+    }
+    best_i
+}
+
+fn sigmoid_vec(v: &[f32]) -> Vec<f32> {
+    v.iter().map(|x| 1.0 / (1.0 + (-x).exp())).collect()
 }

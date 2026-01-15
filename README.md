@@ -113,6 +113,10 @@ Training uses the manifest path configured in `src/config.rs`:
 
 - `mpidb_crops/manifest.csv`
 
+For details on how the training crops and `manifest.csv` are generated, see:
+
+- `DEV_GUIDE.md`
+
 ## 🎓 Learnings and Insights
 
 ### ✅ Technical Wins
