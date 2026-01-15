@@ -8,7 +8,7 @@
 [![Telemedicine](https://img.shields.io/badge/Application-Telemedicine-green)](https://github.com/username/malaria-detection-cnn)
 
 > **Système d'intelligence artificielle pour la détection automatisée du paludisme à partir d'images de frottis sanguins**  
-> *Optimisé en Rust pour les environnements à ressources limitées – 50-100x plus rapide que les solutions Python équivalentes*
+> *Optimisé en Rust pour les environnements à ressources limitées – 50-100x plus rapide que les solutions Python équivalentes* 
 
 ## 🌍 Contexte et Impact Médical
 
