@@ -1,3 +1,4 @@
+use crate::data::MpIdbBatch;
 use burn::{
     module::Module,
     nn::{
@@ -5,10 +6,9 @@ use burn::{
         pool::{AdaptiveAvgPool2d, AdaptiveAvgPool2dConfig, MaxPool2d, MaxPool2dConfig},
         BatchNorm, BatchNormConfig, Dropout, DropoutConfig, Linear, LinearConfig, Relu,
     },
-    tensor::{backend::Backend, Tensor, loss::cross_entropy_with_logits},
+    tensor::{backend::Backend, loss::cross_entropy_with_logits, Tensor},
     train::{TrainOutput, TrainStep, ValidStep},
 };
-use crate::data::MpIdbBatch;
 
 #[derive(Module, Debug)]
 pub struct MalariaCNN<B: Backend> {
@@ -32,6 +32,7 @@ pub struct MalariaCNN<B: Backend> {
 }
 
 impl<B: Backend> MalariaCNN<B> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         device: &B::Device,
         image_channels: usize,
@@ -77,17 +78,36 @@ impl<B: Backend> MalariaCNN<B> {
         let relu = Relu::new();
 
         Self {
-            conv1, bn1, conv2, bn2, conv3, bn3,
-            pool1, pool2, pool3, adaptive_pool,
-            dropout, fc1, fc2, fc_species, fc_stage, relu,
+            conv1,
+            bn1,
+            conv2,
+            bn2,
+            conv3,
+            bn3,
+            pool1,
+            pool2,
+            pool3,
+            adaptive_pool,
+            dropout,
+            fc1,
+            fc2,
+            fc_species,
+            fc_stage,
+            relu,
             stage_loss_lambda,
         }
     }
 
     pub fn forward(&self, x: Tensor<B, 4>) -> (Tensor<B, 2>, Tensor<B, 2>) {
-        let x = self.pool1.forward(self.relu.forward(self.bn1.forward(self.conv1.forward(x))));
-        let x = self.pool2.forward(self.relu.forward(self.bn2.forward(self.conv2.forward(x))));
-        let x = self.pool3.forward(self.relu.forward(self.bn3.forward(self.conv3.forward(x))));
+        let x = self
+            .pool1
+            .forward(self.relu.forward(self.bn1.forward(self.conv1.forward(x))));
+        let x = self
+            .pool2
+            .forward(self.relu.forward(self.bn2.forward(self.conv2.forward(x))));
+        let x = self
+            .pool3
+            .forward(self.relu.forward(self.bn3.forward(self.conv3.forward(x))));
         let x = self.adaptive_pool.forward(x);
         let x = x.flatten(1, 3);
         let x = self.relu.forward(self.dropout.forward(self.fc1.forward(x)));
@@ -134,20 +154,26 @@ impl<B: Backend> burn::train::metric::ItemLazy for ClassificationOutput<B> {
     }
 }
 
-impl<B: Backend> burn::train::metric::Adaptor<burn::train::metric::LossInput<B>> for ClassificationOutput<B> {
+impl<B: Backend> burn::train::metric::Adaptor<burn::train::metric::LossInput<B>>
+    for ClassificationOutput<B>
+{
     fn adapt(&self) -> burn::train::metric::LossInput<B> {
         burn::train::metric::LossInput::new(self.loss.clone())
     }
 }
 
-impl<B: Backend> burn::train::metric::Adaptor<burn::train::metric::AccuracyInput<B>> for ClassificationOutput<B> {
+impl<B: Backend> burn::train::metric::Adaptor<burn::train::metric::AccuracyInput<B>>
+    for ClassificationOutput<B>
+{
     fn adapt(&self) -> burn::train::metric::AccuracyInput<B> {
         let predictions = self.species_output.clone().argmax(1).float();
         burn::train::metric::AccuracyInput::new(predictions, self.species_targets.clone())
     }
 }
 
-impl<B: burn::tensor::backend::AutodiffBackend> TrainStep<MpIdbBatch<B>, ClassificationOutput<B>> for MalariaCNN<B> {
+impl<B: burn::tensor::backend::AutodiffBackend> TrainStep<MpIdbBatch<B>, ClassificationOutput<B>>
+    for MalariaCNN<B>
+{
     fn step(&self, batch: MpIdbBatch<B>) -> TrainOutput<ClassificationOutput<B>> {
         let (species_output, stage_output) = self.forward(batch.images);
         let species_loss = self.compute_species_loss(species_output.clone(), batch.species.clone());

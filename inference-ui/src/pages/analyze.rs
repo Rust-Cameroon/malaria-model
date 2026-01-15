@@ -31,15 +31,19 @@ fn argmax(v: &[f64]) -> usize {
 fn api_base() -> String {
     let w = window().unwrap();
     // 1) If hosted on Render, point to the Render API domain
-    if let Some(loc) = w.location().host().ok() {
+    if let Ok(loc) = w.location().host() {
         if loc.ends_with("onrender.com") {
             return "https://malaria-inference-api.onrender.com".to_string();
         }
     }
     // 2) Allow runtime override via a global variable (can be injected by an inline script)
-    if let Ok(Some(val)) = js_sys::Reflect::get(&w, &JsValue::from_str("VITE_API_BASE")).map(|v| v.as_string()) {
+    if let Ok(Some(val)) =
+        js_sys::Reflect::get(&w, &JsValue::from_str("VITE_API_BASE")).map(|v| v.as_string())
+    {
         let trimmed = val.trim_end_matches('/').to_string();
-        if !trimmed.is_empty() { return trimmed; }
+        if !trimmed.is_empty() {
+            return trimmed;
+        }
     }
     // 3) Fallback to local development API
     "http://localhost:8080".to_string()
@@ -127,14 +131,17 @@ pub fn analyze_page() -> Html {
             let error_state = error_outer.clone();
             let result_state = result_outer.clone();
             let file_state = file_outer.clone();
-            if file_state.is_none() { return; }
+            if file_state.is_none() {
+                return;
+            }
             let f = (*file_state).clone().unwrap();
             loading.set(true);
             error_state.set(None);
             result_state.set(None);
             spawn_local(async move {
                 let form = FormData::new().unwrap();
-                form.append_with_blob_and_filename("image", &f, &f.name()).ok();
+                form.append_with_blob_and_filename("image", &f, &f.name())
+                    .ok();
                 let init = web_sys::RequestInit::new();
                 init.set_method("POST");
                 init.set_body(&form.into());
@@ -145,12 +152,16 @@ pub fn analyze_page() -> Html {
                     Ok(resp) => {
                         let resp: web_sys::Response = resp.dyn_into().unwrap();
                         if !resp.ok() {
-                            let text = wasm_bindgen_futures::JsFuture::from(resp.text().unwrap()).await
-                                .ok().and_then(|t| t.as_string()).unwrap_or_else(|| "Predict failed".to_string());
+                            let text = wasm_bindgen_futures::JsFuture::from(resp.text().unwrap())
+                                .await
+                                .ok()
+                                .and_then(|t| t.as_string())
+                                .unwrap_or_else(|| "Predict failed".to_string());
                             error_state.set(Some(text));
                         } else {
-                            let text_js = wasm_bindgen_futures::JsFuture::from(resp.text().unwrap()).await;
-                            match text_js.and_then(|t| Ok(t.as_string().unwrap_or_default())) {
+                            let text_js =
+                                wasm_bindgen_futures::JsFuture::from(resp.text().unwrap()).await;
+                            match text_js.map(|t| t.as_string().unwrap_or_default()) {
                                 Ok(text) => match serde_json::from_str::<PredictResponse>(&text) {
                                     Ok(parsed) => result_state.set(Some(parsed)),
                                     Err(e) => error_state.set(Some(format!("Invalid JSON: {}", e))),
@@ -238,7 +249,7 @@ pub fn analyze_page() -> Html {
                         let p_infected = (1.0 - p_uninfected).clamp(0.0, 1.0);
 
                         let malaria_species_probs = [
-                            *res.species_probabilities.get(0).unwrap_or(&0.0),
+                            *res.species_probabilities.first().unwrap_or(&0.0),
                             *res.species_probabilities.get(1).unwrap_or(&0.0),
                             *res.species_probabilities.get(2).unwrap_or(&0.0),
                             *res.species_probabilities.get(3).unwrap_or(&0.0),
@@ -340,7 +351,7 @@ pub fn analyze_page() -> Html {
                             <summary class="cursor-pointer text-sm opacity-80">{"Show detailed probabilities"}</summary>
                             <div class="mt-3">
                                 <div class="text-xs opacity-70 mb-1">{"Species probabilities"}</div>
-                                <ProbBar label="Falciparum" value={*res.species_probabilities.get(0).unwrap_or(&0.0)} class_name="bar-a" />
+                                <ProbBar label="Falciparum" value={*res.species_probabilities.first().unwrap_or(&0.0)} class_name="bar-a" />
                                 <div class="h-2" />
                                 <ProbBar label="Malariae" value={*res.species_probabilities.get(1).unwrap_or(&0.0)} class_name="bar-a" />
                                 <div class="h-2" />

@@ -1,12 +1,18 @@
+use crate::pages;
 use yew::prelude::*;
 use yew_router::prelude::*;
-use crate::pages;
 
 fn get_locale() -> String {
     web_sys::window()
         .and_then(|w| w.local_storage().ok().flatten())
         .and_then(|s| s.get_item("locale").ok().flatten())
-        .map(|v| if v == "fr" { "fr".to_string() } else { "en".to_string() })
+        .map(|v| {
+            if v == "fr" {
+                "fr".to_string()
+            } else {
+                "en".to_string()
+            }
+        })
         .unwrap_or_else(|| "en".to_string())
 }
 
@@ -81,7 +87,7 @@ fn layout(props: &LayoutProps) -> Html {
                                     { if get_locale() == "fr" { "Fonctionnalités" } else { "Features" } }
                                 </a>
                                 <a href="#contact" class="hover:opacity-100">
-                                    { if get_locale() == "fr" { "Contact" } else { "Contact" } }
+                                    {"Contact"}
                                 </a>
                             </>
                         } }
@@ -126,7 +132,7 @@ fn layout(props: &LayoutProps) -> Html {
                             { if get_locale() == "fr" { "Conditions" } else { "Terms" } }
                         </a>
                         <a href="#contact" class="hover:opacity-100 opacity-80">
-                            { if get_locale() == "fr" { "Contact" } else { "Contact" } }
+                            {"Contact"}
                         </a>
                     </nav>
                     <div class="flex items-center justify-end opacity-70">

@@ -92,8 +92,8 @@ fn main() -> Result<()> {
         fs::create_dir_all(&out_species_dir)
             .with_context(|| format!("Failed to create {}", out_species_dir.display()))?;
 
-        for entry in fs::read_dir(&gt_dir)
-            .with_context(|| format!("Failed to read {}", gt_dir.display()))?
+        for entry in
+            fs::read_dir(&gt_dir).with_context(|| format!("Failed to read {}", gt_dir.display()))?
         {
             let entry = entry?;
             let gt_path = entry.path();
@@ -240,7 +240,7 @@ fn parse_stages_from_stem(stem: &str) -> Stages {
     let mut g = 0;
 
     for token in stem
-        .split(|c: char| c == '-' || c == '_' || c == ' ')
+        .split(|c: char| ['-', '_', ' '].contains(&c))
         .filter(|t| !t.is_empty())
     {
         match token {
@@ -372,7 +372,8 @@ fn crop_and_square_pad(
 }
 
 fn write_manifest(path: &Path, rows: &[ManifestRow]) -> Result<()> {
-    let mut wtr = Writer::from_path(path).with_context(|| format!("Failed to open {}", path.display()))?;
+    let mut wtr =
+        Writer::from_path(path).with_context(|| format!("Failed to open {}", path.display()))?;
     wtr.write_record([
         "crop_path",
         "infected",
