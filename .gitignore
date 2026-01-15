@@ -1,6 +1,11 @@
 /target
-data/
 malaria-model/
 .idea/
+/data/Parasitized
+/data/plasmodium-phonecamera
+/data/tuberculosis-phonecamera
+/plasmodium-images
+/mpidb_crops/
+/data/Uninfected
 inference-ui/target/
 inference-ui/dist/

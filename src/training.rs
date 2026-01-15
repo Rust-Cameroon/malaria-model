@@ -11,7 +11,7 @@ use burn::{
 };
 use crate::{
     config::ModelConfig,
-    data::{MalariaBatcher, MalariaDataset},
+    data::{MpIdbBatcher, MpIdbDataset},
     malaria_cnn::MalariaCNN,
 };
 
@@ -37,31 +37,33 @@ impl<B: AutodiffBackend> MalariaTrainer<B> {
             self.config.conv3_filters,
             self.config.fc1_units,
             self.config.fc2_units,
-            self.config.num_classes,
+            self.config.num_species_classes,
+            self.config.num_stage_classes,
+            self.config.stage_loss_lambda as f32,
             self.config.dropout_rate,
         );
         
         println!("✅ Modèle créé");
         println!("📁 Chargement du dataset...");
         
-        let full_dataset = MalariaDataset::new(
-            "data",
+        let full_dataset = MpIdbDataset::from_manifest(
+            &self.config.manifest_path,
             self.config.image_height,
             self.config.image_width,
             self.config.use_cache,
         )?;
         
-        let (train_dataset, valid_dataset) = full_dataset.split(0.8);
+        let (train_dataset, valid_dataset) = full_dataset.split_by_source(0.8, 42);
         
         println!("📊 Dataset: {} train, {} valid", train_dataset.len(), valid_dataset.len());
         
         // ✅ FIX: Specify the Backend in DataLoaderBuilder
-        let batcher_train = MalariaBatcher::<B>::new(
+        let batcher_train = MpIdbBatcher::<B>::new(
             self.config.image_height,
             self.config.image_width,
         );
         
-        let batcher_valid = MalariaBatcher::<B::InnerBackend>::new(
+        let batcher_valid = MpIdbBatcher::<B::InnerBackend>::new(
             self.config.image_height,
             self.config.image_width,
         );

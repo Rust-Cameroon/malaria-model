@@ -87,3 +87,5 @@ impl<B: Backend> MalariaCNN<B> {
         self.fc3.forward(x)
     }
 }
+
+fn main() {}
