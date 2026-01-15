@@ -50,21 +50,23 @@ pub fn demo_page() -> Html {
         })
     };
 
-    let analyze = {
-        let preview = preview.clone();
-        let progress = progress.clone();
-        let running = running.clone();
-        let result = result.clone();
+    let on_analyze = {
+        let running_state = running.clone();
+        let progress_state = progress.clone();
+        let result_state = result.clone();
+        let preview_state = preview.clone();
         Callback::from(move |_| {
-            if (*preview).is_none() || *running { return; }
-            running.set(true);
-            result.set(None);
-            progress.set(0);
+            if preview_state.is_none() || *running_state {
+                return;
+            }
+            running_state.set(true);
+            result_state.set(None);
+            progress_state.set(0);
 
-            let preview_val = (*preview).clone().unwrap();
-            let progress_state = progress.clone();
-            let running_state = running.clone();
-            let result_state = result.clone();
+            let preview_val = (*preview_state).clone().unwrap();
+            let progress_state = progress_state.clone();
+            let running_state = running_state.clone();
+            let result_state = result_state.clone();
             spawn_local(async move {
                 let mut val = 0u32;
                 while val < 100 {
@@ -84,7 +86,9 @@ pub fn demo_page() -> Html {
                 } else {
                     // Fallback heuristic
                     let mut hash: i32 = 0;
-                    for ch in preview_val.chars() { hash += ch as i32; }
+                    for ch in preview_val.chars() {
+                        hash += ch as i32;
+                    }
                     let pd = hash % 3 != 0;
                     let conf = (0.7 + ((hash.rem_euclid(30) as f64) / 100.0)).min(0.99);
                     (pd, conf)
@@ -100,7 +104,7 @@ pub fn demo_page() -> Html {
         })
     };
 
-    let samples = vec![
+    let samples = [
         ("/static/infected.png", "Infected"),
         ("/static/uninfected.png", "Not infected"),
     ];
@@ -137,7 +141,7 @@ pub fn demo_page() -> Html {
 
                 <Step number={3} title={"Analyze"}>
                     <p>{"Select a sample image"}</p>
-                    <button onclick={analyze}
+                    <button onclick={on_analyze}
                         disabled={(*preview).is_none() || *running}
                         class={classes!(
                             "mt-4", "px-4", "py-2", "rounded-md", "text-white",
@@ -159,7 +163,7 @@ pub fn demo_page() -> Html {
             </div>
 
             <Step number={4} title={"View results"}>
-                { if let Some(r) = (&*result).clone() {
+                { if let Some(r) = (*result).clone() {
                     html!{
                         <div class="space-y-2">
                             <div>

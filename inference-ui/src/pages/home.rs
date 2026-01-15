@@ -4,7 +4,13 @@ fn get_locale() -> String {
     web_sys::window()
         .and_then(|w| w.local_storage().ok().flatten())
         .and_then(|s| s.get_item("locale").ok().flatten())
-        .map(|v| if v == "fr" { "fr".to_string() } else { "en".to_string() })
+        .map(|v| {
+            if v == "fr" {
+                "fr".to_string()
+            } else {
+                "en".to_string()
+            }
+        })
         .unwrap_or_else(|| "en".to_string())
 }
 
