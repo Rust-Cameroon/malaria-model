@@ -1,4 +1,4 @@
-# 🦟 Malaria Detection CNN – Analyse Automatique de Frottis Sanguins
+# 🔬 Malaria Detection CNN – Analyse Automatique de Frottis Sanguins
 
 [![Rust](https://img.shields.io/badge/Rust-1.75%2B-orange?logo=rust)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -633,13 +633,7 @@ Si vous utilisez ce code dans vos recherches, merci de citer :
 ## 🌟 Témoignages et Impact
 
 > "Ce système a réduit notre temps de diagnostic de 25 minutes à moins d'une minute, permettant de traiter 5 fois plus de patients par jour."  
-> – Dr. Aminata Diallo, Centre de Santé de Bamako
-
-> "La précision est comparable à nos experts seniors, avec une cohérence parfaite 24h/24."  
-> – Prof. Kwame Nkrumah, Université de Ghana
-
-> "L'optimisation Rust permet un déploiement sur des Raspberry Pi dans des zones sans internet."  
-> – Tech Aide Sans Frontières
+> Optimisé en Rust pour les environnements à ressources limitées - Détection en < 50ms*
 
 ---
 
