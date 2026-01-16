@@ -1,5 +1,8 @@
 use gloo_timers::future::TimeoutFuture;
+use js_sys;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
+use web_sys;
 use yew::prelude::*;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -30,12 +33,21 @@ fn step(props: &StepProps) -> Html {
     }
 }
 
+fn get_locale() -> String {
+    web_sys::window()
+        .and_then(|w| w.local_storage().ok().flatten())
+        .and_then(|s| s.get_item("locale").ok().flatten())
+        .unwrap_or_else(|| "en".to_string())
+}
+
 #[function_component(DemoPage)]
 pub fn demo_page() -> Html {
     let preview = use_state(|| None as Option<String>);
     let progress = use_state(|| 0u32);
     let running = use_state(|| false);
     let result = use_state(|| None as Option<DemoResult>);
+    let locale = get_locale();
+    let is_fr = locale == "fr";
 
     let choose_sample = {
         let preview = preview.clone();
@@ -105,23 +117,37 @@ pub fn demo_page() -> Html {
     };
 
     let samples = [
-        ("/static/infected.png", "Infected"),
-        ("/static/uninfected.png", "Not infected"),
+        (
+            "/static/demo_infected.png",
+            if is_fr { "Infecté" } else { "Infected" },
+        ),
+        (
+            "/static/uninfected.png",
+            if is_fr {
+                "Non infecté"
+            } else {
+                "Not infected"
+            },
+        ),
     ];
 
     html! {
         <div class="w-full max-w-7xl mx-auto px-6 sm:px-8 py-20 md:py-24 space-y-6">
             <header class="text-center mb-2">
-                <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">{"Demo: Analyzing a blood smear image"}</h1>
-                <p class="mt-2 text-sm opacity-80">{"Follow the steps below to preview how the analysis works. It runs locally in your browser."}</p>
+                <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">
+                    { if is_fr { "Démo : Analyser un frottis sanguin" } else { "Demo: Analyzing a blood smear image" } }
+                </h1>
+                <p class="mt-2 text-sm opacity-80">
+                    { if is_fr { "Suivez les étapes ci-dessous pour voir comment l'analyse fonctionne. Elle s'exécute localement dans votre navigateur." } else { "Follow the steps below to preview how the analysis works. It runs locally in your browser." } }
+                </p>
             </header>
 
-            <Step number={1} title={"Preview"}>
-                {"Follow the guided steps to see how the analysis works using example images."}
+            <Step number={1} title={ if is_fr { "Aperçu" } else { "Preview" } }>
+                { if is_fr { "Suivez les étapes guidées pour voir comment l'analyse fonctionne avec des images exemples." } else { "Follow the guided steps to see how the analysis works using example images." } }
             </Step>
 
             <div class="grid lg:grid-cols-2 gap-6">
-                <Step number={2} title={"Select a sample image"}>
+                <Step number={2} title={ if is_fr { "Sélectionner une image" } else { "Select a sample image" } }>
                     <div class="grid grid-cols-3 gap-3 mb-4">
                         { for samples.iter().map(|(url, label)| {
                             let choose_sample = choose_sample.clone();
@@ -139,16 +165,18 @@ pub fn demo_page() -> Html {
                     }
                 </Step>
 
-                <Step number={3} title={"Analyze"}>
-                    <p>{"Select a sample image"}</p>
+                <Step number={3} title={ if is_fr { "Analyser" } else { "Analyze" } }>
+                    <p>{ if is_fr { "Sélectionner une image échantillon" } else { "Select a sample image" } }</p>
                     <button onclick={on_analyze}
                         disabled={(*preview).is_none() || *running}
                         class={classes!(
                             "mt-4", "px-4", "py-2", "rounded-md", "text-white",
                             if (*preview).is_none() || *running { Some("bg-gray-500/60") } else { Some("bg-emerald-600 hover:bg-emerald-700") }
                         )}
-                    >{ if *running { "Analyzing..." } else { "Analyze" } }</button>
-                    <p class="mt-2 text-[11px] opacity-60">{"Simulated demo on the client side. Not intended for diagnostic use."}</p>
+                    >{ if *running { if is_fr { "Analyse en cours..." } else { "Analyzing..." } } else if is_fr { "Analyser" } else { "Analyze" } }</button>
+                    <p class="mt-2 text-[11px] opacity-60">
+                        { if is_fr { "Démo simulée côté client. Non destinée à un usage diagnostique." } else { "Simulated demo on the client side. Not intended for diagnostic use." } }
+                    </p>
                     { if *running || *progress > 0 {
                         html!{
                             <div class="mt-4">
@@ -162,20 +190,51 @@ pub fn demo_page() -> Html {
                 </Step>
             </div>
 
-            <Step number={4} title={"View results"}>
+            <Step number={4} title={ if is_fr { "Voir les résultats" } else { "View results" } }>
                 { if let Some(r) = (*result).clone() {
                     html!{
                         <div class="space-y-2">
                             <div>
-                                {"Parasite detected: "}
-                                { if r.parasite_detected { html!{ <span class="text-red-400 font-semibold">{"Yes"}</span> } } else { html!{ <span class="text-emerald-400 font-semibold">{"No"}</span> } } }
+                                { if is_fr { "Parasite détecté : " } else { "Parasite detected: " } }
+                                { if r.parasite_detected { html!{ <span class="text-red-400 font-semibold">{ if is_fr { "Oui" } else { "Yes" } }</span> } } else { html!{ <span class="text-emerald-400 font-semibold">{ if is_fr { "Non" } else { "No" } }</span> } } }
                             </div>
-                            <div>{format!("Confidence: {:.1}%", r.confidence * 100.0)}</div>
-                            <div class="text-xs opacity-60">{format!("Processed at: {}", r.processed_at)}</div>
+                            <div>{format!("{}: {:.1}%", if is_fr { "Confiance" } else { "Confidence" }, r.confidence * 100.0)}</div>
+                            <div class="text-xs opacity-60 mb-3">{format!("{}: {}", if is_fr { "Traité à" } else { "Processed at" }, r.processed_at)}</div>
+                            <button
+                                onclick={
+                                    let r = r.clone();
+                                    let preview = (*preview).clone();
+                                    Callback::from(move |_| {
+                                        let date = js_sys::Date::new_0().to_locale_string("en-US", &wasm_bindgen::JsValue::from_str("{\"dateStyle\":\"long\", \"timeStyle\":\"short\"}")).as_string().unwrap_or_default();
+                                        let data = serde_json::json!({
+                                            "infected": r.parasite_detected,
+                                            "species": if r.parasite_detected { "Detected (Demo)" } else { "Uninfected (Demo)" },
+                                            "speciesProb": r.confidence,
+                                            "stage": "Not specified (Demo)",
+                                            "stageProb": 0.0,
+                                            "date": date,
+                                            "imageUrl": preview
+                                        });
+
+                                        if let Ok(js_data) = serde_wasm_bindgen::to_value(&data) {
+                                            let window = web_sys::window().unwrap();
+                                            let _ = js_sys::Reflect::get(&window, &wasm_bindgen::JsValue::from_str("generateMalariaReport"))
+                                                .unwrap()
+                                                .dyn_into::<js_sys::Function>()
+                                                .unwrap()
+                                                .call1(&wasm_bindgen::JsValue::NULL, &js_data);
+                                        }
+                                    })
+                                }
+                                class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded transition-colors flex items-center gap-2 text-xs"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                { if is_fr { "Télécharger le rapport (PDF)" } else { "Download Demo Report (PDF)" } }
+                            </button>
                         </div>
                     }
                 } else {
-                    html!{ <p class="text-sm opacity-80">{"No results yet. Complete steps 1 to 3 and click Analyze."}</p> }
+                    html!{ <p class="text-sm opacity-80">{ if is_fr { "Aucun résultat. Complétez les étapes 1 à 3 et cliquez sur Analyser." } else { "No results yet. Complete steps 1 to 3 and click Analyze." } }</p> }
                 }}
             </Step>
         </div>

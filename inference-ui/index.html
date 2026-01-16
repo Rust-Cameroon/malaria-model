@@ -1,57 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Malaria Inference UI (Yew)</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: { sans: ['Poppins', 'ui-sans-serif', 'system-ui'] },
-            colors: {
-              primary: { DEFAULT: '#1E40AF', foreground: '#FFFFFF' },
-              'dgrv-blue': '#1E40AF',
-              'dgrv-green': '#10B981',
-              'dgrv-light-blue': '#EFF6FF',
-              'bright-blue': '#00BFFF',
-            },
-            borderRadius: {
-              lg: '0.5rem',
-              md: '0.375rem',
-              sm: '0.25rem',
-            },
-            keyframes: {
-              'fade-in': { '0%': { opacity: 0, transform: 'translateY(10px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
-              'scale-in': { '0%': { transform: 'scale(0.95)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
-              glow: { '0%, 100%': { boxShadow: '0 0 5px rgba(30, 64, 175, 0.5)' }, '50%': { boxShadow: '0 0 20px rgba(30, 64, 175, 0.8)' } },
-            },
-            animation: {
-              'fade-in': 'fade-in 0.3s ease-out',
-              'scale-in': 'scale-in 0.2s ease-out',
-              glow: 'glow 2s ease-in-out infinite',
-            }
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Giemsa AI - Malaria Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Poppins', 'ui-sans-serif', 'system-ui'] },
+          colors: {
+            primary: { DEFAULT: '#1E40AF', foreground: '#FFFFFF' },
+            'dgrv-blue': '#1E40AF',
+            'dgrv-green': '#10B981',
+            'dgrv-light-blue': '#EFF6FF',
+            'bright-blue': '#00BFFF',
+          },
+          borderRadius: {
+            lg: '0.5rem',
+            md: '0.375rem',
+            sm: '0.25rem',
+          },
+          keyframes: {
+            'fade-in': { '0%': { opacity: 0, transform: 'translateY(10px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+            'scale-in': { '0%': { transform: 'scale(0.95)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+            glow: { '0%, 100%': { boxShadow: '0 0 5px rgba(30, 64, 175, 0.5)' }, '50%': { boxShadow: '0 0 20px rgba(30, 64, 175, 0.8)' } },
+          },
+          animation: {
+            'fade-in': 'fade-in 0.3s ease-out',
+            'scale-in': 'scale-in 0.2s ease-out',
+            glow: 'glow 2s ease-in-out infinite',
           }
         }
       }
-    </script>
-    <style>
-      :root { color-scheme: dark; }
-      body { margin: 0; }
-    </style>
-    <script>
-      // Optional: set window.VITE_API_BASE = "http://localhost:8080"; at runtime to override
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <!-- Trunk will build and inject the WASM/JS for this Rust crate -->
-    <link data-trunk rel="copy-dir" href="static/" />
-    <link data-trunk rel="rust" />
-  </body>
-  </html>
+    }
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    window.generateMalariaReport = function (raw_data) {
+      console.log("Generating Malaria Report with data:", raw_data);
+      if (!window.jspdf) {
+        console.error("jsPDF library not loaded.");
+        alert("Error: Report generation library not loaded.");
+        return;
+      }
+
+      // Handle Map vs Object (serde-wasm-bindgen can return Maps)
+      let data = raw_data;
+      if (raw_data instanceof Map) {
+        data = Object.fromEntries(raw_data);
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const { infected, species, speciesProb, stage, stageProb, date, imageUrl } = data;
+
+      // Brand Colors
+      const primary = infected ? [153, 27, 27] : [6, 95, 70]; // Red-800 or Emerald-800
+      const accent = [16, 185, 129]; // Emerald-500
+
+      // Header
+      doc.setFillColor(primary[0], primary[1], primary[2]);
+      doc.rect(0, 0, 210, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.text("Giemsa AI Diagnostics", 20, 25);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Generated on: ${date}`, 140, 25);
+
+      // Main Status
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("Diagnostic Summary", 20, 55);
+
+      doc.setDrawColor(primary[0], primary[1], primary[2]);
+      doc.setLineWidth(0.5);
+      doc.line(20, 58, 190, 58);
+
+      // Status Box
+      doc.setFillColor(243, 244, 246);
+      doc.roundedRect(20, 65, 170, 30, 3, 3, 'F');
+
+      doc.setFontSize(12);
+      doc.text("RESULT:", 30, 80);
+      doc.setFontSize(14);
+      doc.setTextColor(primary[0], primary[1], primary[2]);
+      doc.text(infected ? "MALARIA DETECTED" : "NO MALARIA DETECTED", 60, 80);
+
+      // Details
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Analysis Details", 20, 110);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      let y = 120;
+
+      const info = [
+        ["Status", infected ? "Positive" : "Negative"],
+        ["Primary Species", species],
+        ["Species Confidence", `${(speciesProb * 100).toFixed(1)}%`],
+      ];
+
+      if (infected) {
+        info.push(["Parasite Stage", stage]);
+        info.push(["Stage Confidence", `${(stageProb * 100).toFixed(1)}%`]);
+      }
+
+      info.forEach(([label, value]) => {
+        doc.setFont("helvetica", "bold");
+        doc.text(`${label}:`, 20, y);
+        doc.setFont("helvetica", "normal");
+        doc.text(value, 60, y);
+        y += 10;
+      });
+
+      // Footer (re-defined later)
+
+      // Image Handling
+      if (imageUrl) {
+        const logoImg = new Image();
+        logoImg.src = "/static/logo.png";
+
+        const img = new Image();
+        img.src = imageUrl;
+
+        // Wait for both images (logo + evidence)
+        let loaded = 0;
+        const total = 2; // logo + evidence
+
+        const checkDone = () => {
+          loaded++;
+          if (loaded >= total) {
+            finalizeAndSave(logoImg, img);
+          }
+        };
+
+        // Fallback if images fail
+        logoImg.onerror = checkDone;
+        img.onerror = checkDone;
+
+        logoImg.onload = checkDone;
+        img.onload = checkDone;
+
+      } else {
+        // Just logo needed
+        const logoImg = new Image();
+        logoImg.src = "/static/logo.png";
+        logoImg.onload = function () { finalizeAndSave(logoImg, null); };
+        logoImg.onerror = function () { finalizeAndSave(null, null); };
+      }
+
+      function finalizeAndSave(logoImg, evidenceImg) {
+        // Add Evidence Image if loaded
+        if (evidenceImg && evidenceImg.width > 0) {
+          const canvas = document.createElement("canvas");
+          canvas.width = evidenceImg.width;
+          canvas.height = evidenceImg.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(evidenceImg, 0, 0);
+          const imgData = canvas.toDataURL("image/jpeg");
+
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(120, 115, 70, 70, 'S');
+          doc.addImage(imgData, 'JPEG', 121, 116, 68, 68);
+          doc.setFontSize(8);
+          doc.text("Analysis Input Image Evidence", 125, 190);
+        }
+
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text("Note: This is an AI-generated research report and should be verified by a certified medical professional.", 20, 280);
+        doc.text("Giemsa AI - Advanced Malaria Detection Platform", 20, 285);
+
+        // Add Logo at bottom right if loaded
+        if (logoImg && logoImg.width > 0) {
+          const canvas = document.createElement("canvas");
+          canvas.width = logoImg.width;
+          canvas.height = logoImg.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(logoImg, 0, 0);
+          const logoData = canvas.toDataURL("image/png");
+          // Bottom right corner (Page height ~297mm)
+          doc.addImage(logoData, 'PNG', 170, 260, 25, 25);
+        }
+
+        doc.save(`giemsa_report_${date.replace(/[/:\s]/g, '_')}.pdf`);
+      }
+    };
+  </script>
+  <script>
+    // Optional: set window.VITE_API_BASE = "http://localhost:8080"; at runtime to override
+  </script>
+
+</head>
+
+<body>
+  <div id="root"></div>
+  <!-- Trunk will build and inject the WASM/JS for this Rust crate -->
+  <link data-trunk rel="copy-dir" href="static/" />
+  <link data-trunk rel="rust" />
+</body>
+
+</html>

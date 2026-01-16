@@ -19,18 +19,27 @@ pub fn home_page() -> Html {
     html! {
         <div class="w-full">
             <section class="relative overflow-hidden">
-                <div class="absolute inset-0 -z-10 bg-gradient-to-b from-emerald-700/20 via-transparent to-transparent"></div>
-                <div class="max-w-7xl mx-auto px-6 sm:px-8 py-20 md:py-28 text-center">
+                <nav class="absolute top-0 left-0 w-full z-10 px-6 py-6 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="/static/logo.png" class="h-8 w-8 rounded-full" alt="Giemsa AI Logo" />
+                        <span class="font-bold text-xl tracking-tight">{"Giemsa AI"}</span>
+                    </div>
+                </nav>
+                <div class="absolute inset-0 -z-10 bg-gradient-to-b from-emerald-900/30 via-transparent to-transparent"></div>
+                <div class="max-w-7xl mx-auto px-6 sm:px-8 py-24 md:py-32 text-center">
                     <>
                         <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs opacity-80">
                             { if get_locale() == "fr" { "Recherche et éducation" } else { "Research and Education Overview" } }
                         </div>
-                        <h1 class="mt-4 text-4xl md:text-6xl font-extrabold tracking-tight">
+                        <h1 class="mt-4 text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-2">
+                            {"Giemsa AI"}
+                        </h1>
+                        <h2 class="text-2xl md:text-4xl font-bold tracking-tight opacity-90">
                             { if get_locale() == "fr" { "Analyse IA des frottis du paludisme" } else { "AI analysis of malaria smears" } }
                             <span class="block text-emerald-400">
                                 { if get_locale() == "fr" { "pour un triage clinique plus rapide" } else { "for faster clinical triage" } }
                             </span>
-                        </h1>
+                        </h2>
                         <p class="mt-4 text-base md:text-lg opacity-80 max-w-3xl mx-auto">
                             { if get_locale() == "fr" {
                                 "Vision par ordinateur moderne pour aider cliniciens et laboratoires avec une évaluation rapide et cohérente des images de frottis sanguins."
@@ -81,7 +90,105 @@ pub fn home_page() -> Html {
                 </div>
             </section>
 
-            <section id="features" class="px-6 sm:px-8 py-16">
+            <section class="px-6 sm:px-8 py-12 bg-white/[0.02] border-t border-white/5">
+                <div class="max-w-7xl mx-auto">
+                    <div class="text-center mb-12">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-4">
+                            { if get_locale() == "fr" { "L'Urgence du Paludisme en Afrique" } else { "The Malaria Crisis in Africa" } }
+                        </h2>
+                        <p class="text-lg opacity-80 max-w-3xl mx-auto">
+                            { if get_locale() == "fr" {
+                                "Le paludisme reste l'un des plus grands défis de santé publique sur le continent. Voici pourquoi notre solution est cruciale."
+                            } else {
+                                "Malaria remains one of the greatest public health challenges on the continent. Here is why our solution is crucial."
+                            } }
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="p-6 rounded-2xl bg-emerald-950/30 border border-emerald-500/20 text-center animate-fade-in" style="animation-delay: 0.1s">
+                            <div class="text-4xl font-black text-emerald-400 mb-2">{"265M"}</div>
+                            <p class="text-sm font-semibold opacity-90 uppercase tracking-wider">
+                                { if get_locale() == "fr" { "Cas Annuels en Afrique" } else { "Annual Cases in Africa" } }
+                            </p>
+                            <p class="mt-2 text-xs opacity-60">{"95% of the total global burden falls on the African continent."}</p>
+                        </div>
+                        <div class="p-6 rounded-2xl bg-emerald-950/30 border border-emerald-500/20 text-center animate-fade-in" style="animation-delay: 0.2s">
+                            <div class="text-4xl font-black text-emerald-400 mb-2">{"579K"}</div>
+                            <p class="text-sm font-semibold opacity-90 uppercase tracking-wider">
+                                { if get_locale() == "fr" { "Décès Annuels" } else { "Annual Deaths" } }
+                            </p>
+                            <p class="mt-2 text-xs opacity-60">{"The vast majority of malaria-related deaths occur in the WHO African Region."}</p>
+                        </div>
+                        <div class="p-6 rounded-2xl bg-emerald-950/30 border border-emerald-500/20 text-center animate-fade-in" style="animation-delay: 0.3s">
+                            <div class="text-4xl font-black text-emerald-400 mb-2">{"76%"}</div>
+                            <p class="text-sm font-semibold opacity-90 uppercase tracking-wider">
+                                { if get_locale() == "fr" { "Enfants < 5 ans" } else { "Children < 5 years" } }
+                            </p>
+                            <p class="mt-2 text-xs opacity-60">{"The most vulnerable demographic, accounting for 3 out of every 4 malaria deaths."}</p>
+                        </div>
+                        <div class="p-6 rounded-2xl bg-emerald-950/30 border border-emerald-500/20 text-center animate-fade-in" style="animation-delay: 0.4s">
+                            <div class="text-4xl font-black text-emerald-400 mb-2">{"$5.1B"}</div>
+                            <p class="text-sm font-semibold opacity-90 uppercase tracking-wider">
+                                { if get_locale() == "fr" { "Déficit de Financement" } else { "Funding Gap" } }
+                            </p>
+                            <p class="mt-2 text-xs opacity-60">{"The gap between current resources and the US$9.3B needed for elimination by 2025."}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="px-6 sm:px-8 py-16 overflow-hidden">
+                <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12">
+                    <div class="flex-1 space-y-6">
+                        <div class="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-400">
+                             { if get_locale() == "fr" { "Aperçu des Données" } else { "Data Insight" } }
+                        </div>
+                        <h2 class="text-3xl md:text-5xl font-bold leading-tight">
+                            { if get_locale() == "fr" { "Pourquoi cette plateforme est nécessaire ?" } else { "Why is this platform necessary?" } }
+                        </h2>
+                        <div class="space-y-4 text-lg opacity-80">
+                            <p>
+                                { if get_locale() == "fr" {
+                                    "La détection précoce est la clé pour réduire la mortalité. Cependant, de nombreux établissements de santé en Afrique manquent de microscopistes experts ou font face à une charge de travail écrasante."
+                                } else {
+                                    "Early detection is key to reducing mortality. However, many health facilities in Africa lack expert microscopists or face overwhelming workloads."
+                                } }
+                            </p>
+                            <p>
+                                { if get_locale() == "fr" {
+                                    "Notre plateforme d'IA comble ce fossé en fournissant des outils d'analyse automatisés, rapides et précis pour soutenir le diagnostic clinique dans les régions les plus touchées."
+                                } else {
+                                    "Our AI platform bridges this gap by providing automated, rapid, and accurate analysis tools to support clinical diagnosis in the most affected regions."
+                                } }
+                            </p>
+                        </div>
+                        <div class="pt-4 border-t border-white/10 grid grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="font-bold text-emerald-400 text-sm italic">{"High Burden Zone 1"}</h4>
+                                <p class="text-xl font-bold">{"Nigeria (31.9%)"}</p>
+                                <p class="text-xs opacity-60">{"of global malaria deaths"}</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-emerald-400 text-sm italic">{"High Burden Zone 2"}</h4>
+                                <p class="text-xl font-bold">{"DRC (11.7%)"}</p>
+                                <p class="text-xs opacity-60">{"of global malaria deaths"}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 relative">
+                        <div class="absolute -inset-4 bg-emerald-500/20 blur-3xl -z-10 rounded-full"></div>
+                        <img
+                            src="/static/malaria_map_burden.png"
+                            alt="Malaria Burden Map in Africa"
+                            class="rounded-2xl border border-white/10 shadow-2xl shadow-emerald-900/20 w-full animate-scale-in"
+                        />
+                    </div>
+                </div>
+            </section>
+
+
+            <section id="features" class="px-6 sm:px-8 py-12">
                 <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-6">
                     <article class="rounded-xl border border-white/10 p-6 bg-white/5">
                         <div class="flex items-center gap-3 mb-3">
@@ -107,7 +214,7 @@ pub fn home_page() -> Html {
                 </div>
             </section>
 
-            <section class="px-6 sm:px-8 pb-20">
+            <section class="px-6 sm:px-8 pb-16">
                 <div class="max-w-5xl mx-auto rounded-2xl border border-white/10 p-8 bg-white/5 text-center">
                     <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs opacity-80 mb-3">{"Commitment"}</div>
                     <h3 class="text-2xl md:text-3xl font-bold">{"Responsible AI for healthcare"}</h3>

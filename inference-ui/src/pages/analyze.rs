@@ -1,4 +1,5 @@
 use gloo_net::http::Request;
+use js_sys;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{window, DragEvent, File as WebFile, FormData, HtmlInputElement, Url};
@@ -282,7 +283,52 @@ pub fn analyze_page() -> Html {
                             "bg-black/20",
                             if res.infected { "border-red-500/40" } else { "border-emerald-500/40" }
                         )}>
-                            <div class="text-xs uppercase tracking-wide opacity-70">{"Diagnosis"}</div>
+                            <div class="flex items-center justify-between">
+                                <div class="text-xs uppercase tracking-wide opacity-70">{"Diagnosis"}</div>
+                                <button
+                                    onclick={
+                                        let res = res.clone();
+                                        let preview_url = (*preview_url).clone();
+                                        Callback::from(move |_| {
+                                            let malaria_species_labels = ["Falciparum", "Malariae", "Ovale", "Vivax", "Uninfected"];
+                                            let stage_labels = ["Ring stage (R)", "Trophozoite stage (T)", "Schizont stage (S)", "Gametocyte stage (G)"];
+
+                                            let best_species_idx = argmax(&res.species_probabilities);
+                                            let best_species_label = malaria_species_labels.get(best_species_idx).unwrap_or(&"Unknown");
+                                            let best_species_conf = res.species_probabilities[best_species_idx];
+
+                                            let best_stage_idx = argmax(&res.stage_probabilities);
+                                            let best_stage_label = stage_labels.get(best_stage_idx).unwrap_or(&"Unknown");
+                                            let best_stage_conf = res.stage_probabilities[best_stage_idx];
+
+                                            let date = js_sys::Date::new_0().to_locale_string("en-US", &JsValue::from_str("{\"dateStyle\":\"long\", \"timeStyle\":\"short\"}")).as_string().unwrap_or_default();
+
+                                            let data = serde_json::json!({
+                                                "infected": res.infected,
+                                                "species": best_species_label,
+                                                "speciesProb": best_species_conf,
+                                                "stage": best_stage_label,
+                                                "stageProb": best_stage_conf,
+                                                "date": date,
+                                                "imageUrl": preview_url
+                                            });
+
+                                            if let Ok(js_data) = serde_wasm_bindgen::to_value(&data) {
+                                                let window = web_sys::window().unwrap();
+                                                let _ = js_sys::Reflect::get(&window, &JsValue::from_str("generateMalariaReport"))
+                                                    .unwrap()
+                                                    .dyn_into::<js_sys::Function>()
+                                                    .unwrap()
+                                                    .call1(&JsValue::NULL, &js_data);
+                                            }
+                                        })
+                                    }
+                                    class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors flex items-center gap-1"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    {"Download Report (PDF)"}
+                                </button>
+                            </div>
                             <div class="mt-1 text-xl font-extrabold">
                                 { if res.infected {
                                     "Malaria detected"
