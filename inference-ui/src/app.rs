@@ -32,6 +32,8 @@ pub enum Route {
     Demo,
     #[at("/analyze")]
     Analyze,
+    #[at("/features")]
+    Features,
     #[not_found]
     #[at("/404")]
     NotFound,
@@ -42,6 +44,7 @@ fn switch(route: Route) -> Html {
         Route::Home => html! { <pages::home::HomePage /> },
         Route::Demo => html! { <pages::demo::DemoPage /> },
         Route::Analyze => html! { <pages::analyze::AnalyzePage /> },
+        Route::Features => html! { <pages::features::FeaturesPage /> },
         Route::NotFound => html! {
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                 <div class="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -67,13 +70,12 @@ fn layout(props: &LayoutProps) -> Html {
 
             <header class="fixed top-0 inset-x-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/30 bg-black/40">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 grid grid-cols-3 items-center">
-                    <div class="flex items-center">
-                        { html!{
-                            <Link<Route> to={Route::Home} classes="text-lg font-bold tracking-tight text-bright-blue">
-                                { if get_locale() == "fr" { "Détection du paludisme" } else { "Malaria Detection" } }
+                        <div class="flex items-center gap-3">
+                             <Link<Route> to={Route::Home} classes="flex items-center gap-2 text-lg font-bold tracking-tight text-white hover:opacity-90">
+                                <img src="/static/logo.png" class="h-8 w-8 rounded-full" alt="Giemsa AI Logo" />
+                                <span>{"Giemsa AI"}</span>
                             </Link<Route>>
-                        } }
-                    </div>
+                        </div>
                     <nav class="flex items-center justify-center gap-6 text-sm text-bright-blue opacity-90">
                         { html!{
                             <>
@@ -83,9 +85,9 @@ fn layout(props: &LayoutProps) -> Html {
                                 <Link<Route> to={Route::Analyze} classes="hover:opacity-100">
                                     { if get_locale() == "fr" { "Analyser" } else { "Analyze" } }
                                 </Link<Route>>
-                                <a href="#features" class="hover:opacity-100">
+                                <Link<Route> to={Route::Features} classes="hover:opacity-100">
                                     { if get_locale() == "fr" { "Fonctionnalités" } else { "Features" } }
-                                </a>
+                                </Link<Route>>
                                 <a href="#contact" class="hover:opacity-100">
                                     {"Contact"}
                                 </a>

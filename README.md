@@ -10,6 +10,7 @@
 > **AI system for malaria detection from blood smear images**  
 > Implemented in Rust (Burn) with an Axum inference API and a Yew web UI.
 
+![](demo.png)
 ## Overview
 
 This model predicts:
@@ -31,7 +32,7 @@ Stage labels are weak (image-level presence inferred from filename tokens) and a
 ## Requirements
 
 - Rust toolchain
-- Optional (UI): `trunk` + target `wasm32-unknown-unknown`
+- UI: `trunk` + target `wasm32-unknown-unknown`
 
 ## Data Preparation (Crops + Manifest)
 
