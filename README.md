@@ -10,7 +10,8 @@
 > **AI system for malaria detection from blood smear images**  
 > Implemented in Rust (Burn) with an Axum inference API and a Yew web UI.
 
-![](demo.png)
+
+![x](demo.png)
 ## Overview
 
 This model predicts:
